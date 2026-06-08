@@ -327,9 +327,23 @@ function App() {
 
       const formatNumber = (val) => {
         if (val === null || val === undefined || val === '') return '';
-        const num = parseFloat(String(val).replace(',', '.'));
-        if (isNaN(num)) return val;
-        return num;
+        if (typeof val === 'number') return val;
+
+        const strVal = String(val).trim();
+
+        // Preserva zeros à esquerda (CPFs, CNPJs, Códigos)
+        if (/^0\d+$/.test(strVal)) {
+          return strVal;
+        }
+
+        // Tenta converter formatos brasileiros (ex: 1.234,56 ou 196,27) para número real
+        if (/^-?\d{1,3}(\.\d{3})*(,\d+)?$/.test(strVal) || /^-?\d+(,\d+)?$/.test(strVal)) {
+          const cleanStr = strVal.replace(/\./g, '').replace(',', '.');
+          const num = parseFloat(cleanStr);
+          if (!isNaN(num)) return num;
+        }
+
+        return strVal;
       };
 
       const allOutputColumns = Array.from(new Set([...newHeaders, ...dataMappings.map(m => m.newCol).filter(Boolean)]));
@@ -396,7 +410,10 @@ function App() {
             for (let R = 1; R <= range.e.r; ++R) {
               const cell = newWorksheet[XLSX.utils.encode_cell({r: R, c: C})];
               if (cell && typeof cell.v === 'number') {
-                cell.z = '#,##0.00';
+                // Aplica formatação decimal apenas se o número tiver casas decimais (não for inteiro)
+                if (!Number.isInteger(cell.v)) {
+                  cell.z = '#,##0.00';
+                }
               }
             }
           }
