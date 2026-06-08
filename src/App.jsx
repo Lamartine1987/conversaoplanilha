@@ -191,6 +191,28 @@ function App() {
       setMessage({ type: '', text: '' });
       setAnalysisComplete(false);
     }
+    // Reseta o input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = null;
+  };
+
+  const clearFile = (type) => {
+    if (type === 'old') {
+      setOldFile(null);
+      setOldHeaders([]);
+      setParsedOld(null);
+      setOldDataCount(0);
+      setMapKeyOld('');
+    } else {
+      setNewFile(null);
+      setNewHeaders([]);
+      setParsedNew(null);
+      setParsedWorkbook(null);
+      setParsedSheetName('');
+      setNewDataCount(0);
+      setMapKeyNew('');
+    }
+    setAnalysisComplete(false);
+    setMessage({ type: '', text: '' });
   };
 
   const addRule = async (e) => {
@@ -415,9 +437,19 @@ function App() {
             <input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleFileUpload(e, setOldFile, 'old')} style={{ display: 'none' }} />
           </label>
           {oldFile && (
-             <div className="file-info" style={{marginTop: '1rem'}}>
-               <strong>Arquivo:</strong> {oldFile.name}<br/>
-               <span style={{color: '#64748b', fontSize: '0.85rem'}}>O sistema identificou <strong>{oldDataCount}</strong> linhas com dados neste arquivo.</span>
+             <div className="file-info" style={{marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+               <div>
+                 <strong>Arquivo:</strong> {oldFile.name}<br/>
+                 <span style={{color: '#64748b', fontSize: '0.85rem'}}>O sistema identificou <strong>{oldDataCount}</strong> linhas com dados neste arquivo.</span>
+               </div>
+               <button 
+                 className="btn btn-danger" 
+                 style={{padding: '0.4rem 0.8rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem'}}
+                 onClick={() => clearFile('old')}
+                 title="Remover planilha"
+               >
+                 <Trash2 size={16} /> Remover
+               </button>
              </div>
           )}
         </div>
@@ -436,9 +468,19 @@ function App() {
             <input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleFileUpload(e, setNewFile, 'new')} style={{ display: 'none' }} />
           </label>
           {newFile && (
-             <div className="file-info" style={{marginTop: '1rem'}}>
-               <strong>Arquivo:</strong> {newFile.name}<br/>
-               <span style={{color: '#64748b', fontSize: '0.85rem'}}>O sistema identificou <strong>{newDataCount}</strong> linhas com dados neste arquivo.</span>
+             <div className="file-info" style={{marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+               <div>
+                 <strong>Arquivo:</strong> {newFile.name}<br/>
+                 <span style={{color: '#64748b', fontSize: '0.85rem'}}>O sistema identificou <strong>{newDataCount}</strong> linhas com dados neste arquivo.</span>
+               </div>
+               <button 
+                 className="btn btn-danger" 
+                 style={{padding: '0.4rem 0.8rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem'}}
+                 onClick={() => clearFile('new')}
+                 title="Remover planilha"
+               >
+                 <Trash2 size={16} /> Remover
+               </button>
              </div>
           )}
         </div>
@@ -454,7 +496,10 @@ function App() {
           </p>
           
           <div style={{marginBottom: '1.5rem', padding: '1.5rem', background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)'}}>
-            <h4 style={{marginBottom: '1rem', fontSize: '1.1rem'}}>1. Chave de Ligação (Identificador do Produto)</h4>
+            <h4 style={{marginBottom: '1rem', fontSize: '1.1rem'}}>1. Chave de Ligação (Identificador Principal)</h4>
+            <p style={{fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem'}}>
+              Escolha a coluna em cada planilha que contém a informação em comum (ex: Nome do Cliente, Código, CPF) que será usada para "casar" as linhas.
+            </p>
             <div className="grid-2">
               <div>
                 <label className="input-label">Coluna na Antiga:</label>
@@ -474,7 +519,10 @@ function App() {
           </div>
 
           <div style={{padding: '1.5rem', background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)'}}>
-            <h4 style={{marginBottom: '1rem', fontSize: '1.1rem'}}>2. Dados a Preencher</h4>
+            <h4 style={{marginBottom: '1rem', fontSize: '1.1rem'}}>2. Dados a Preencher (Copiar e Colar)</h4>
+            <p style={{fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem'}}>
+              Escolha quais colunas você quer "puxar" da planilha antiga. Você pode selecionar uma coluna existente da nova para ser substituída, <strong>ou digitar um novo nome</strong> (ex: "Valores a Pagar") para criar uma coluna nova!
+            </p>
             {dataMappings.map((mapping, index) => (
               <div key={index} className="grid-2" style={{marginBottom: '1rem', alignItems: 'flex-end'}}>
                 <div>
@@ -525,6 +573,9 @@ function App() {
 
           <div style={{padding: '1.5rem', background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginTop: '1.5rem'}}>
             <h4 style={{marginBottom: '1rem', fontSize: '1.1rem'}}>3. Limpeza do Arquivo Final</h4>
+            <p style={{fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem'}}>
+              Desmarque as colunas que você <strong>não</strong> quer que apareçam no arquivo final gerado.
+            </p>
             <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.8rem'}}>
               {Array.from(new Set([...newHeaders, ...dataMappings.map(m => m.newCol).filter(Boolean)])).map(col => {
                 const isChecked = !uncheckedColumns.includes(col);
@@ -555,6 +606,9 @@ function App() {
           <Settings />
           Regras de Mapeamento Manual (Dicionário)
         </div>
+        <p style={{marginBottom: '1.5rem', color: '#64748b', fontSize: '0.9rem'}}>
+          O sistema usará a <strong>Chave de Ligação</strong> escolhida. Se a chave original estiver escrita diferente da nova (ex: "BOTA INF" e "BOTA INFANTIL"), você pode ensinar ao sistema criar uma regra de tradução aqui:
+        </p>
         <form className="rule-form" onSubmit={addRule}>
           <div className="input-group">
             <label className="input-label">Se o identificador original contiver:</label>
