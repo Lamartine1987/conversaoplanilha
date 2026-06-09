@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Upload, FileSpreadsheet, Download, Settings, Plus, Trash2, Leaf, GitMerge, Search, Loader2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Download, Settings, Plus, Trash2, Leaf, GitMerge, Search, Loader2, AlertCircle } from 'lucide-react';
 import { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -165,7 +165,16 @@ function App() {
       const headers = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] || [];
       const cleanHeaders = headers.map(h => String(h).trim());
       
-      const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      
+      const json = rawData.map(row => {
+        const cleanRow = {};
+        Object.keys(row).forEach(key => {
+          cleanRow[key.trim()] = row[key];
+        });
+        return cleanRow;
+      });
+
       console.log(`[Extrator] Arquivo tipo: ${type} | Total de Linhas Lidas: ${json.length} | Colunas: ${cleanHeaders.length}`);
 
       if (type === 'old') {
@@ -296,19 +305,24 @@ function App() {
       let matchedCount = 0;
       let blankCount = 0;
 
+      const normalizeStr = (str) => {
+        return String(str || '').replace(/\s+/g, ' ').trim().toUpperCase();
+      };
+
       const rulesMap = {};
       rules.forEach(r => {
-        rulesMap[r.oldKeyword] = r.newKeyword;
+        rulesMap[normalizeStr(r.oldKeyword)] = normalizeStr(r.newKeyword);
       });
 
       const oldDataMap = {};
       const uniqueOldKeys = new Set();
       
       oldData.forEach(row => {
-        const oldKeyVal = String(row[mapKeyOld] || '').trim();
+        const originalOldKey = String(row[mapKeyOld] || '').trim();
+        const oldKeyVal = normalizeStr(originalOldKey);
         if (!oldKeyVal) return;
 
-        uniqueOldKeys.add(oldKeyVal);
+        uniqueOldKeys.add(originalOldKey);
         let mappedKey = oldKeyVal;
 
         if (rulesMap[oldKeyVal]) {
@@ -320,7 +334,7 @@ function App() {
           extractedData[mapping.oldCol] = row[mapping.oldCol];
         });
 
-        oldDataMap[mappedKey.toUpperCase()] = extractedData;
+        oldDataMap[mappedKey] = extractedData;
       });
 
       const unmatchedList = [];
@@ -350,8 +364,8 @@ function App() {
       const finalOutputColumns = allOutputColumns.filter(c => !uncheckedColumns.includes(c));
 
       const updatedNewData = newData.map(row => {
-        const newKeyVal = String(row[mapKeyNew] || '').trim();
-        const match = oldDataMap[newKeyVal.toUpperCase()];
+        const newKeyVal = normalizeStr(row[mapKeyNew]);
+        const match = oldDataMap[newKeyVal];
 
         const updatedRow = { ...row };
 
@@ -362,6 +376,9 @@ function App() {
           });
         } else if (newKeyVal) {
           unmatchedList.push({ name: newKeyVal });
+          dataMappings.forEach(mapping => {
+            updatedRow[mapping.newCol] = '';
+          });
         } else {
           blankCount++;
         }
@@ -685,11 +702,15 @@ function App() {
       </div>
 
       {analysisComplete && unmatchedItems.length > 0 && (
-        <div className="card" style={{marginTop: '2rem', borderColor: '#fef08a', borderWidth: '2px', backgroundColor: '#fefce8'}}>
-          <h3 style={{color: '#a16207', marginBottom: '1rem'}}>
-            ⚠️ Produtos Sem Correspondência ({unmatchedItems.length})
-          </h3>
-          <div style={{marginBottom: '1rem'}}>
+          <div className="card fade-in" style={{ borderColor: '#fef08a', backgroundColor: '#fefce8' }}>
+            <div className="card-header" style={{ borderBottom: '1px solid #fef08a' }}>
+              <h2 className="card-title" style={{ color: '#b45309' }}>
+                <AlertCircle size={20} style={{ marginRight: '8px' }} />
+                Produtos Sem Correspondência ({unmatchedItems.length})
+              </h2>
+            </div>
+            
+            <div style={{ padding: '1rem', borderBottom: '1px solid #fef08a' }}>
             <div style={{display: 'flex', alignItems: 'center', background: '#fff', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #fde047'}}>
               <Search size={18} color="#a16207" style={{marginRight: '8px'}} />
               <input 
